@@ -1,0 +1,8 @@
+{
+  "name": "Explore Ease",
+  "description": "Premium AI-powered travel booking and itinerary orchestration platform. Features real-time destination intelligence, AI itinerary generation, and voice-guided tour previews.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}
