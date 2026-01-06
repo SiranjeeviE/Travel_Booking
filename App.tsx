@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Booking from './pages/Booking';
 import MyBookings from './pages/MyBookings';
+import AiItinerary from './pages/AiItinerary';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -29,15 +30,24 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-950 text-slate-50">
       <nav className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="font-bold">E</span>
+          <div className="flex items-center gap-10">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                <span className="font-bold">E</span>
+              </div>
+              <span className="font-bold text-xl tracking-tight">Explore Ease</span>
+            </Link>
+            
+            <div className="hidden md:flex items-center gap-6">
+              <Link to="/" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Hotels</Link>
+              <Link to="/ai-itinerary" className="text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
+                AI Planner
+              </Link>
             </div>
-            <span className="font-bold text-xl tracking-tight">Explore Ease</span>
-          </Link>
+          </div>
           
           <div className="flex items-center gap-6">
-            <Link to="/" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Hotels</Link>
             {user ? (
               <>
                 <Link to="/my-bookings" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">My Bookings</Link>
@@ -70,6 +80,7 @@ const App: React.FC = () => {
           <Route path="/signup" element={<Signup setUser={setUser} />} />
           <Route path="/booking/:hotelId" element={user ? <Booking /> : <Navigate to="/login" />} />
           <Route path="/my-bookings" element={user ? <MyBookings /> : <Navigate to="/login" />} />
+          <Route path="/ai-itinerary" element={<AiItinerary />} />
         </Routes>
       </main>
     </div>
