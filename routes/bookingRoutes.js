@@ -1,26 +1,23 @@
 
 import express from 'express';
 import { protect } from '../middleware/authMiddleware.js';
+import { createBooking, getMyBookings } from '../controllers/bookingController.js';
 
 const router = express.Router();
 
-// All routes after this middleware are protected
+// Apply protection to all booking endpoints
 router.use(protect);
 
-router.get('/my-bookings', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: `Fetched bookings for user: ${req.user.name}`
-    // Real logic would query Booking model here
-  });
-});
+/**
+ * @route   GET /api/bookings/my-bookings
+ * @desc    Fetch bookings for the logged-in user
+ */
+router.get('/my-bookings', getMyBookings);
 
-router.post('/', (req, res) => {
-  res.status(201).json({
-    status: 'success',
-    message: 'Booking request received',
-    user: req.user._id
-  });
-});
+/**
+ * @route   POST /api/bookings
+ * @desc    Create a new room booking
+ */
+router.post('/', createBooking);
 
 export default router;
