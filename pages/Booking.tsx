@@ -11,6 +11,7 @@ const Booking: React.FC = () => {
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [checkIn, setCheckIn] = useState<Date | null>(null);
   const [checkOut, setCheckOut] = useState<Date | null>(null);
+  const [hoverDate, setHoverDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [isBooked, setIsBooked] = useState(false);
@@ -53,6 +54,7 @@ const Booking: React.FC = () => {
       setCheckOut(null);
     } else if (date > checkIn) {
       setCheckOut(date);
+      setHoverDate(null);
     } else {
       setCheckIn(date);
       setCheckOut(null);
@@ -60,8 +62,13 @@ const Booking: React.FC = () => {
   };
 
   const isInRange = (date: Date) => {
-    if (!checkIn || !checkOut) return false;
-    return date > checkIn && date < checkOut;
+    if (checkIn && checkOut) {
+      return date > checkIn && date < checkOut;
+    }
+    if (checkIn && hoverDate && !checkOut) {
+      return (date > checkIn && date < hoverDate) || (date < checkIn && date > hoverDate);
+    }
+    return false;
   };
 
   const isSelected = (date: Date) => {
@@ -290,7 +297,6 @@ const Booking: React.FC = () => {
               }}
               className="max-w-[90vw] max-h-[80vh] flex items-center justify-center"
             >
-              {/* Added key and animation classes for smooth transitions */}
               <img 
                 key={activeImageIndex}
                 src={hotelImages[activeImageIndex]} 
@@ -416,18 +422,18 @@ const Booking: React.FC = () => {
             <h3 className="text-2xl font-black mb-6 tracking-tight">Complete Reservation</h3>
             
             <div className="space-y-6 mb-8">
-              {/* Custom Date Picker */}
+              {/* Sophisticated Date Range Picker */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex gap-4">
-                    <div className="text-center">
+                    <div className={`text-center transition-opacity ${checkIn ? 'opacity-100' : 'opacity-40'}`}>
                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Check-In</p>
-                      <p className="text-sm font-bold text-white">{checkIn ? checkIn.toLocaleDateString() : 'Select Date'}</p>
+                      <p className="text-sm font-bold text-white">{checkIn ? checkIn.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'Set Date'}</p>
                     </div>
                     <div className="h-8 w-[1px] bg-slate-800 mt-2"></div>
-                    <div className="text-center">
+                    <div className={`text-center transition-opacity ${checkOut ? 'opacity-100' : 'opacity-40'}`}>
                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Check-Out</p>
-                      <p className="text-sm font-bold text-white">{checkOut ? checkOut.toLocaleDateString() : 'Select Date'}</p>
+                      <p className="text-sm font-bold text-white">{checkOut ? checkOut.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'Set Date'}</p>
                     </div>
                   </div>
                   <div className="flex gap-1">
@@ -446,16 +452,16 @@ const Booking: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4">
-                  <div className="text-center mb-4">
-                    <span className="text-sm font-black text-indigo-400 uppercase tracking-widest">{monthName}</span>
+                <div className="bg-slate-950 border border-slate-800 rounded-3xl p-5 overflow-hidden">
+                  <div className="text-center mb-5">
+                    <span className="text-sm font-black text-indigo-400 uppercase tracking-[0.2em]">{monthName}</span>
                   </div>
                   <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
-                      <span key={d} className="text-[10px] font-black text-slate-600">{d}</span>
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                      <span key={i} className="text-[9px] font-black text-slate-600">{d}</span>
                     ))}
                   </div>
-                  <div className="grid grid-cols-7 gap-1">
+                  <div className="grid grid-cols-7 gap-1" onMouseLeave={() => setHoverDate(null)}>
                     {calendarDays.map((date, idx) => {
                       if (!date) return <div key={`empty-${idx}`} className="aspect-square"></div>;
                       
@@ -464,22 +470,33 @@ const Booking: React.FC = () => {
                       const isPast = date < today;
                       const active = isSelected(date);
                       const inRange = isInRange(date);
+                      const isCheckIn = checkIn && date.getTime() === checkIn.getTime();
+                      const isCheckOut = checkOut && date.getTime() === checkOut.getTime();
+                      const isHovered = hoverDate && date.getTime() === hoverDate.getTime();
                       
                       return (
                         <button
                           key={date.getTime()}
                           disabled={isPast}
                           onClick={() => handleDateClick(date)}
+                          onMouseEnter={() => !isPast && setHoverDate(date)}
                           className={`
-                            aspect-square rounded-lg text-xs font-bold transition-all relative
-                            ${isPast ? 'text-slate-800 cursor-not-allowed line-through' : 'hover:bg-slate-800'}
-                            ${active ? 'bg-indigo-600 text-white shadow-lg scale-110 z-10' : 'text-slate-300'}
-                            ${inRange ? 'bg-indigo-500/20 text-indigo-300' : ''}
+                            aspect-square rounded-xl text-xs font-bold transition-all relative group/day
+                            ${isPast ? 'text-slate-800 cursor-not-allowed' : 'hover:scale-105'}
+                            ${active ? 'bg-indigo-600 text-white z-10 shadow-lg shadow-indigo-600/30' : 'text-slate-300'}
+                            ${inRange ? 'bg-indigo-500/10 text-indigo-300' : ''}
+                            ${!active && !inRange && !isPast ? 'hover:bg-slate-800' : ''}
+                            ${isCheckIn && !checkOut ? 'rounded-r-none' : ''}
+                            ${isCheckOut ? 'rounded-l-none' : ''}
                           `}
                         >
-                          {date.getDate()}
+                          <span className="relative z-10">{date.getDate()}</span>
                           {date.getTime() === today.getTime() && (
-                            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-500 rounded-full"></div>
+                            <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-0.5 h-0.5 bg-indigo-500 rounded-full"></div>
+                          )}
+                          {/* Visual range highlight helper */}
+                          {inRange && (
+                            <div className="absolute inset-0 bg-indigo-500/5 -z-0"></div>
                           )}
                         </button>
                       );
