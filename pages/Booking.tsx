@@ -249,13 +249,13 @@ const Booking: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 relative">
       {/* Gallery Modal */}
       {galleryOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4">
-          <div className="absolute top-6 left-6 text-white z-10">
+        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 transition-opacity duration-300">
+          <div className="absolute top-6 left-6 text-white z-10 animate-in fade-in slide-in-from-left-4">
             <h4 className="text-xl font-bold">{hotel.name}</h4>
             <p className="text-slate-400 text-sm">Image {activeImageIndex + 1} of {hotelImages.length}</p>
           </div>
           
-          <div className="absolute top-6 right-6 flex items-center gap-4 z-10">
+          <div className="absolute top-6 right-6 flex items-center gap-4 z-10 animate-in fade-in slide-in-from-right-4">
             <div className="flex bg-slate-800/80 rounded-full p-1 border border-slate-700">
               <button onClick={() => handleZoom(0.5)} className="p-2 hover:bg-slate-700 rounded-full text-white transition-colors" title="Zoom In">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" /></svg>
@@ -264,7 +264,7 @@ const Booking: React.FC = () => {
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM7 10h6" /></svg>
               </button>
             </div>
-            <button onClick={closeGallery} className="bg-white/10 hover:bg-white/20 p-3 rounded-full text-white backdrop-blur-md transition-all">
+            <button onClick={closeGallery} className="bg-white/10 hover:bg-white/20 p-3 rounded-full text-white backdrop-blur-md transition-all active:scale-90">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
@@ -276,35 +276,37 @@ const Booking: React.FC = () => {
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
           >
-            <button onClick={prevImage} className="absolute left-4 md:left-10 z-10 bg-black/50 hover:bg-indigo-600 p-4 rounded-full text-white transition-all backdrop-blur-md border border-white/10 group">
+            <button onClick={prevImage} className="absolute left-4 md:left-10 z-10 bg-black/50 hover:bg-indigo-600 p-4 rounded-full text-white transition-all backdrop-blur-md border border-white/10 group active:scale-95">
               <svg className="w-6 h-6 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <button onClick={nextImage} className="absolute right-4 md:right-10 z-10 bg-black/50 hover:bg-indigo-600 p-4 rounded-full text-white transition-all backdrop-blur-md border border-white/10 group">
+            <button onClick={nextImage} className="absolute right-4 md:right-10 z-10 bg-black/50 hover:bg-indigo-600 p-4 rounded-full text-white transition-all backdrop-blur-md border border-white/10 group active:scale-95">
               <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
             </button>
 
             <div 
               style={{
                 transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
-                transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
               className="max-w-[90vw] max-h-[80vh] flex items-center justify-center"
             >
+              {/* Added key and animation classes for smooth transitions */}
               <img 
+                key={activeImageIndex}
                 src={hotelImages[activeImageIndex]} 
-                className="max-w-full max-h-full object-contain shadow-2xl rounded-lg select-none"
+                className="max-w-full max-h-full object-contain shadow-2xl rounded-lg select-none animate-in fade-in duration-700"
                 alt={`Gallery ${activeImageIndex}`}
                 draggable={false}
               />
             </div>
           </div>
 
-          <div className="absolute bottom-10 flex gap-3 p-2 bg-slate-900/50 backdrop-blur-md rounded-2xl border border-white/10 overflow-x-auto max-w-[80vw]">
+          <div className="absolute bottom-10 flex gap-3 p-2 bg-slate-900/50 backdrop-blur-md rounded-2xl border border-white/10 overflow-x-auto max-w-[80vw] animate-in fade-in slide-in-from-bottom-4">
             {hotelImages.map((img: string, i: number) => (
               <button 
                 key={i} 
                 onClick={(e) => { e.stopPropagation(); setActiveImageIndex(i); setZoom(1); setPosition({x:0,y:0}); }}
-                className={`w-20 h-14 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${activeImageIndex === i ? 'border-indigo-500 scale-105 shadow-lg' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                className={`w-20 h-14 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all duration-300 ${activeImageIndex === i ? 'border-indigo-500 scale-105 shadow-lg shadow-indigo-500/20' : 'border-transparent opacity-50 hover:opacity-100 hover:scale-105'}`}
               >
                 <img src={img} className="w-full h-full object-cover" alt={`Thumb ${i}`} />
               </button>
