@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import API from '../api';
+import API from '../api.ts';
 
 const Signup: React.FC<{ setUser: any }> = ({ setUser }) => {
   const [name, setName] = useState('');
@@ -71,7 +71,7 @@ const Signup: React.FC<{ setUser: any }> = ({ setUser }) => {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg"
+            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-4 rounded-xl font-black transition-all shadow-lg"
           >
             {loading ? 'Creating Account...' : 'Sign Up'}
           </button>

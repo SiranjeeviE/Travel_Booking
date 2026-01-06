@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import API from '../api';
+import API from '../api.ts';
 
 const Booking: React.FC = () => {
   const { hotelId } = useParams();

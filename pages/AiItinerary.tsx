@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
-import { TravelPlan } from '../types';
+import { TravelPlan } from '../types.ts';
 
 const AiItinerary: React.FC = () => {
   const [destination, setDestination] = useState('');
