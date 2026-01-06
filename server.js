@@ -5,6 +5,8 @@ import cors from 'cors';
 import connectDB from './db.js';
 import authRoutes from './routes/authRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
+import hotelRoutes from './routes/hotelRoutes.js';
+import roomRoutes from './routes/roomRoutes.js';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -21,8 +23,12 @@ connectDB();
 /**
  * Routes
  */
-// Public routes
+// Public/Auth routes
 app.use('/api/auth', authRoutes);
+
+// Hotel and Room management
+app.use('/api/hotels', hotelRoutes);
+app.use('/api/rooms', roomRoutes);
 
 // Protected routes (middleware is handled inside the router)
 app.use('/api/bookings', bookingRoutes);
