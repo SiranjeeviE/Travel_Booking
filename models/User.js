@@ -1,11 +1,10 @@
-
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Please provide your name'],
+    required: [true, 'Please tell us your name!'],
     trim: true
   },
   email: {
@@ -19,7 +18,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide a password'],
     minlength: 8,
-    select: false // Ensure password isn't returned in queries by default
+    select: false // Ensures password is never returned in standard queries
   },
   role: {
     type: String,
@@ -30,15 +29,19 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Pre-save hook to hash password before saving to database
+/**
+ * Hashes password before saving to the database.
+ */
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
-// Method to check if provided password matches hashed password
-userSchema.methods.comparePassword = async function(candidatePassword, userPassword) {
+/**
+ * Checks if a provided password matches the hashed version in the DB.
+ */
+userSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
   return await bcrypt.compare(candidatePassword, userPassword);
 };
 

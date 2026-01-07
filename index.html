@@ -19,55 +19,11 @@
     .font-mono {
       font-family: 'JetBrains Mono', monospace;
     }
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #1e293b;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
   </style>
   
   <script>
-    // Robust environment shim for browser ESM
     window.global = window;
-    window.process = window.process || { env: { NODE_ENV: 'development' } };
-    if (!window.process.env) window.process.env = { NODE_ENV: 'development' };
-    
-    // Catch-all for early module resolution errors
-    window.addEventListener('error', (event) => {
-      const isModuleError = event.message && (
-        event.message.includes('import') || 
-        event.message.includes('Refused to execute') ||
-        event.message.includes('Failed to fetch dynamically imported module')
-      );
-      
-      if (isModuleError) {
-        console.error('Module load error detected:', event);
-        const root = document.getElementById('root');
-        if (root) {
-          root.innerHTML = `
-            <div style="padding: 3rem; color: #f87171; font-family: sans-serif; text-align: center; background: #0f172a; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-              <div style="font-size: 3rem; margin-bottom: 1.5rem;">⚠️</div>
-              <h2 style="font-weight: 800; font-size: 1.8rem; margin-bottom: 1rem; color: #fff;">Application Boot Failed</h2>
-              <p style="color: #94a3b8; max-width: 500px; margin-bottom: 2rem; line-height: 1.6;">
-                The browser encountered a critical error while resolving application modules. 
-                This is typically caused by incompatible or unreachable dependencies in the import map.
-              </p>
-              <button onclick="location.reload()" style="background: #6366f1; color: white; padding: 0.8rem 2.5rem; border: none; border-radius: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);">
-                Retry Initialization
-              </button>
-            </div>
-          `;
-        }
-      }
-    });
+    window.process = { env: { NODE_ENV: 'development' } };
   </script>
 
   <script type="importmap">
@@ -95,14 +51,12 @@
   <div id="root">
     <div style="height: 100vh; display: flex; align-items: center; justify-content: center; color: #6366f1; font-family: sans-serif; background: #0f172a;">
       <div style="text-align: center;">
-        <div style="width: 48px; height: 48px; border: 3px solid #6366f120; border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 24px;"></div>
-        <p style="font-weight: 700; letter-spacing: 0.1em; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">Waking up the Travel Engine...</p>
+        <div style="width: 40px; height: 40px; border: 3px solid #6366f120; border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 20px;"></div>
+        <p style="font-weight: 600; font-size: 0.875rem; color: #94a3b8;">Initializing Experience...</p>
       </div>
     </div>
   </div>
-  <style>
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
+  <style> @keyframes spin { to { transform: rotate(360deg); } } </style>
   <script type="module" src="index.tsx"></script>
 </body>
 </html>

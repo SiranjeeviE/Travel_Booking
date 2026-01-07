@@ -1,9 +1,10 @@
-
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import catchAsync from '../utils/catchAsync.js';
+import AppError from '../utils/AppError.js';
 
 /**
- * Generates a JWT token for a given user ID.
+ * Generates a signed JWT for the user.
  */
 const signToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -11,74 +12,49 @@ const signToken = (id) => {
   });
 };
 
-/**
- * Registers a new user.
- */
-export const signup = async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
+export const signup = catchAsync(async (req, res, next) => {
+  const { name, email, password } = req.body;
 
-    // 1. Create user (password hashing is handled in User model)
-    const newUser = await User.create({
-      name,
-      email,
-      password
-    });
+  const newUser = await User.create({
+    name,
+    email,
+    password
+  });
 
-    // 2. Generate token
-    const token = signToken(newUser._id);
+  const token = signToken(newUser._id);
+  
+  // Hide password from the response
+  newUser.password = undefined;
 
-    // 3. Send response (hide password)
-    newUser.password = undefined;
+  res.status(201).json({
+    status: 'success',
+    token,
+    data: { user: newUser }
+  });
+});
 
-    res.status(201).json({
-      status: 'success',
-      token,
-      data: { user: newUser }
-    });
-  } catch (err) {
-    res.status(400).json({
-      status: 'fail',
-      message: err.message
-    });
+export const login = catchAsync(async (req, res, next) => {
+  const { email, password } = req.body;
+
+  // 1) Validate presence of credentials
+  if (!email || !password) {
+    return next(new AppError('Please provide email and password', 400));
   }
-};
 
-/**
- * Authenticates an existing user.
- */
-export const login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
+  // 2) Check if user exists and password is correct
+  const user = await User.findOne({ email }).select('+password');
 
-    // 1. Check if email and password exist
-    if (!email || !password) {
-      return res.status(400).json({ status: 'fail', message: 'Please provide email and password' });
-    }
-
-    // 2. Find user and explicitly select password
-    const user = await User.findOne({ email }).select('+password');
-
-    // 3. Verify user exists and password is correct
-    if (!user || !(await user.comparePassword(password, user.password))) {
-      return res.status(401).json({ status: 'fail', message: 'Incorrect email or password' });
-    }
-
-    // 4. Generate token
-    const token = signToken(user._id);
-
-    // 5. Send response
-    user.password = undefined;
-
-    res.status(200).json({
-      status: 'success',
-      token,
-      data: { user }
-    });
-  } catch (err) {
-    res.status(400).json({
-      status: 'fail',
-      message: err.message
-    });
+  if (!user || !(await user.correctPassword(password, user.password))) {
+    return next(new AppError('Incorrect email or password', 401));
   }
-};
+
+  // 3) Issue token
+  const token = signToken(user._id);
+  user.password = undefined;
+
+  res.status(200).json({
+    status: 'success',
+    token,
+    data: { user }
+  });
+});

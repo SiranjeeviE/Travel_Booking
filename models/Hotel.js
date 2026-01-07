@@ -1,4 +1,3 @@
-
 import mongoose from 'mongoose';
 
 const hotelSchema = new mongoose.Schema({
@@ -22,7 +21,7 @@ const hotelSchema = new mongoose.Schema({
     default: 4.5
   },
   images: [{
-    type: String // URLs to images
+    type: String
   }],
   amenities: [{
     type: String

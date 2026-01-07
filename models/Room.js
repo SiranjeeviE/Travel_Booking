@@ -1,24 +1,23 @@
-
 import mongoose from 'mongoose';
 
 const roomSchema = new mongoose.Schema({
   hotel: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Hotel',
-    required: true
+    required: [true, 'Room must belong to a hotel']
   },
   roomType: {
     type: String,
-    required: true,
+    required: [true, 'Room type is required'],
     enum: ['Single', 'Double', 'Suite', 'Deluxe']
   },
   pricePerNight: {
     type: Number,
-    required: true
+    required: [true, 'Price per night is required']
   },
   capacity: {
     type: Number,
-    required: true
+    required: [true, 'Capacity is required']
   },
   isAvailable: {
     type: Boolean,

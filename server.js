@@ -1,4 +1,3 @@
-
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -7,8 +6,10 @@ import authRoutes from './routes/authRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import hotelRoutes from './routes/hotelRoutes.js';
 import roomRoutes from './routes/roomRoutes.js';
+import globalErrorHandler from './middleware/errorMiddleware.js';
+import AppError from './utils/AppError.js';
 
-// Load environment variables from .env file
+// Load environment variables
 dotenv.config();
 
 const app = express();
@@ -20,32 +21,21 @@ app.use(express.json());
 // Establish Connection to MongoDB
 connectDB();
 
-/**
- * Routes
- */
-// Public/Auth routes
+// Routes
 app.use('/api/auth', authRoutes);
-
-// Hotel and Room management
 app.use('/api/hotels', hotelRoutes);
 app.use('/api/rooms', roomRoutes);
-
-// Protected routes (middleware is handled inside the router)
 app.use('/api/bookings', bookingRoutes);
 
-// Root/Health Check Route
-app.get('/', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'Explore Ease API is operational',
-    environment: process.env.NODE_ENV || 'development'
-  });
+// Catch-all for undefined routes
+app.all('*', (req, res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
-// Port Configuration
-const PORT = process.env.PORT || 5000;
+// Global Error Handling Middleware
+app.use(globalErrorHandler);
 
-// Start Listening
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
