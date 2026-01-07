@@ -1,11 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
-// Import Link to resolve navigation errors
 import { Link } from 'react-router-dom';
 import API from '../api.ts';
 
 const MyBookings: React.FC = () => {
-  const [bookings, setBookings] = useState([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -14,7 +12,9 @@ const MyBookings: React.FC = () => {
         const { data } = await API.get('/bookings/my-bookings');
         setBookings(data.data.bookings);
       } catch (err) {
-        console.error("Failed to fetch my bookings", err);
+        console.warn("API Error, merging with local demo bookings");
+        const localBookings = JSON.parse(localStorage.getItem('demo_bookings') || '[]');
+        setBookings(localBookings);
       } finally {
         setLoading(false);
       }
@@ -25,7 +25,7 @@ const MyBookings: React.FC = () => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-40 gap-4">
       <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
-      <p className="text-slate-500 font-medium">Loading your history...</p>
+      <p className="text-slate-500 font-medium">Retrieving your history...</p>
     </div>
   );
 
@@ -41,7 +41,7 @@ const MyBookings: React.FC = () => {
               }`}>
                 {booking.status}
               </span>
-              <h3 className="text-2xl font-bold tracking-tight">{booking.room?.hotel?.name || 'Hotel Stay'}</h3>
+              <h3 className="text-2xl font-bold tracking-tight">{booking.room?.hotel?.name || 'Luxury Stay'}</h3>
               <p className="text-slate-500 font-medium">{booking.room?.hotel?.location}</p>
               <div className="flex gap-4 text-sm text-slate-400 font-medium">
                 <span className="flex items-center gap-2">
@@ -49,24 +49,18 @@ const MyBookings: React.FC = () => {
                   {new Date(booking.checkInDate).toLocaleDateString()} — {new Date(booking.checkOutDate).toLocaleDateString()}
                 </span>
                 <span className="text-slate-800">•</span>
-                <span>{booking.room?.roomType} Room</span>
+                <span>{booking.room?.roomType}</span>
               </div>
             </div>
-            <div className="text-right md:bg-slate-950/50 p-6 rounded-2xl md:border md:border-slate-800/50 min-w-[140px]">
+            <div className="text-right bg-slate-950/50 p-6 rounded-2xl border border-slate-800/50 min-w-[140px]">
               <p className="text-3xl font-black text-indigo-400">${booking.totalPrice}</p>
               <p className="text-slate-500 text-[10px] uppercase font-black tracking-widest mt-1">Total Stay</p>
             </div>
           </div>
         )) : (
           <div className="bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-[3rem] p-24 text-center">
-             <div className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-             </div>
-            <p className="text-slate-500 font-medium text-lg">You haven't booked any adventures yet!</p>
-            {/* Added Link component to navigate users back to the homepage */}
-            <Link to="/" className="mt-6 inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-black transition-all shadow-xl shadow-indigo-600/20 active:scale-95">
-              Discover Stays
-            </Link>
+            <p className="text-slate-500 font-medium text-lg mb-6">You haven't booked any adventures yet!</p>
+            <Link to="/" className="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-black transition-all shadow-xl active:scale-95">Discover Stays</Link>
           </div>
         )}
       </div>

@@ -1,13 +1,42 @@
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import API from '../api.ts';
+
+const MOCK_ROOMS = [
+  { _id: 'room-1', roomType: 'Deluxe Suite', pricePerNight: 450, capacity: 2 },
+  { _id: 'room-2', roomType: 'Grand Ocean View', pricePerNight: 750, capacity: 3 },
+  { _id: 'room-3', roomType: 'Presidential Penthouse', pricePerNight: 2400, capacity: 4 }
+];
+
+const MOCK_HOTELS_DB = {
+  'demo-1': {
+    name: 'Aman Tokyo',
+    location: 'Tokyo, Japan',
+    description: 'A sanctuary atop the Otemachi Tower, Aman Tokyo balances urban dynamism with Japanese tradition.',
+    images: ['https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=1200'],
+    amenities: ['Spa', 'Pool', 'Fine Dining', 'City View']
+  },
+  'demo-2': {
+    name: 'Hotel de Crillon',
+    location: 'Paris, France',
+    description: 'A legendary palace hotel overlooking the Place de la Concorde.',
+    images: ['https://images.unsplash.com/photo-1551882547-ff43c63faf76?auto=format&fit=crop&q=80&w=1200'],
+    amenities: ['Butler Service', 'Historic', 'Garden', 'Bar']
+  },
+  'demo-3': {
+    name: 'Belmond Hotel Caruso',
+    location: 'Ravello, Italy',
+    description: 'An 11th-century palace set on a cliff above the Amalfi Coast.',
+    images: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200'],
+    amenities: ['Infinity Pool', 'Terrace', 'Sea View', 'Gym']
+  }
+};
 
 const Booking: React.FC = () => {
   const { hotelId } = useParams();
   const navigate = useNavigate();
   const [hotel, setHotel] = useState<any>(null);
-  const [rooms, setRooms] = useState([]);
+  const [rooms, setRooms] = useState<any[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [checkIn, setCheckIn] = useState<Date | null>(null);
   const [checkOut, setCheckOut] = useState<Date | null>(null);
@@ -17,21 +46,13 @@ const Booking: React.FC = () => {
   const [isBooked, setIsBooked] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
   
-  // Carousel State
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const autoPlayTimer = useRef<number | null>(null);
-
-  // Calendar State
   const [viewDate, setViewDate] = useState(new Date());
-  
-  // Gallery Modal State
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,7 +61,12 @@ const Booking: React.FC = () => {
         setHotel(data.data.hotel);
         setRooms(data.data.rooms);
       } catch (err) {
-        console.error("Failed to fetch hotel detail", err);
+        console.warn("API Error, fetching from Mock DB", hotelId);
+        const mockHotel = MOCK_HOTELS_DB[hotelId as keyof typeof MOCK_HOTELS_DB];
+        if (mockHotel) {
+          setHotel(mockHotel);
+          setRooms(MOCK_ROOMS);
+        }
       } finally {
         setLoading(false);
       }
@@ -57,7 +83,6 @@ const Booking: React.FC = () => {
     ];
   }, [hotel]);
 
-  // Carousel Logic
   const nextSlide = useCallback(() => {
     setCurrentSlide(prev => (prev + 1) % hotelImages.length);
   }, [hotelImages.length]);
@@ -67,15 +92,14 @@ const Booking: React.FC = () => {
   }, [hotelImages.length]);
 
   useEffect(() => {
-    if (isAutoPlaying && !galleryOpen) {
+    if (isAutoPlaying && !galleryOpen && hotelImages.length > 1) {
       autoPlayTimer.current = window.setInterval(nextSlide, 5000);
     }
     return () => {
       if (autoPlayTimer.current) clearInterval(autoPlayTimer.current);
     };
-  }, [isAutoPlaying, galleryOpen, nextSlide]);
+  }, [isAutoPlaying, galleryOpen, nextSlide, hotelImages.length]);
 
-  // Date Selection Logic
   const handleDateClick = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -94,21 +118,15 @@ const Booking: React.FC = () => {
   };
 
   const isInRange = (date: Date) => {
-    if (checkIn && checkOut) {
-      return date > checkIn && date < checkOut;
-    }
-    if (checkIn && hoverDate && !checkOut && hoverDate > checkIn) {
-      return date > checkIn && date < hoverDate;
-    }
+    if (checkIn && checkOut) return date > checkIn && date < checkOut;
+    if (checkIn && hoverDate && !checkOut && hoverDate > checkIn) return date > checkIn && date < hoverDate;
     return false;
   };
 
-  const isSelected = (date: Date) => {
-    return (
-      (checkIn && date.getTime() === checkIn.getTime()) ||
-      (checkOut && date.getTime() === checkOut.getTime())
-    );
-  };
+  const isSelected = (date: Date) => (
+    (checkIn && date.getTime() === checkIn.getTime()) ||
+    (checkOut && date.getTime() === checkOut.getTime())
+  );
 
   const calculateDays = () => {
     if (!checkIn || !checkOut) return 0;
@@ -116,30 +134,20 @@ const Booking: React.FC = () => {
     return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
   };
 
-  // Calendar Helpers
   const calendarDays = useMemo(() => {
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
     const days = [];
-    for (let i = 0; i < firstDay; i++) {
-      days.push(null);
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(new Date(year, month, i));
-    }
+    for (let i = 0; i < firstDay; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
     return days;
   }, [viewDate]);
 
-  const monthName = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-
   const handleBooking = async () => {
-    const days = calculateDays();
-    if (!selectedRoom || days <= 0 || !checkIn || !checkOut) {
-      return;
-    }
+    const daysCount = calculateDays();
+    if (!selectedRoom || daysCount <= 0 || !checkIn || !checkOut) return;
 
     setBookingLoading(true);
     try {
@@ -151,66 +159,32 @@ const Booking: React.FC = () => {
       setConfirmedBooking(data.data.booking);
       setIsBooked(true);
     } catch (err: any) {
-      alert(err.response?.data?.message || "Booking failed. Please try again.");
+      if (!err.response) {
+        // Local Demo Persistence
+        const demoBooking = {
+          _id: 'demo-res-' + Math.random().toString(36).substr(2, 9),
+          room: { ...selectedRoom, hotel: { name: hotel.name, location: hotel.location } },
+          checkInDate: checkIn.toISOString(),
+          checkOutDate: checkOut.toISOString(),
+          totalPrice: daysCount * selectedRoom.pricePerNight,
+          status: 'confirmed'
+        };
+        const existing = JSON.parse(localStorage.getItem('demo_bookings') || '[]');
+        localStorage.setItem('demo_bookings', JSON.stringify([...existing, demoBooking]));
+        setConfirmedBooking(demoBooking);
+        setIsBooked(true);
+      } else {
+        alert(err.response?.data?.message || "Booking failed.");
+      }
     } finally {
       setBookingLoading(false);
     }
   };
 
-  const openGallery = (index: number) => {
-    setActiveImageIndex(index);
-    setZoom(1);
-    setPosition({ x: 0, y: 0 });
-    setGalleryOpen(true);
-    document.body.style.overflow = 'hidden';
-  };
-
-  const closeGallery = () => {
-    setGalleryOpen(false);
-    document.body.style.overflow = 'auto';
-  };
-
-  const handleZoom = (delta: number) => {
-    setZoom(prev => Math.min(Math.max(1, prev + delta), 4));
-    if (zoom === 1) setPosition({ x: 0, y: 0 });
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (zoom > 1) {
-      setIsDragging(true);
-      dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging && zoom > 1) {
-      setPosition({
-        x: e.clientX - dragStart.current.x,
-        y: e.clientY - dragStart.current.y
-      });
-    }
-  };
-
-  const handleMouseUp = () => setIsDragging(false);
-
-  const nextImage = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setActiveImageIndex(prev => (prev + 1) % hotelImages.length);
-    setZoom(1);
-    setPosition({ x: 0, y: 0 });
-  };
-
-  const prevImage = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setActiveImageIndex(prev => (prev - 1 + hotelImages.length) % hotelImages.length);
-    setZoom(1);
-    setPosition({ x: 0, y: 0 });
-  };
-
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-40 gap-4">
       <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
-      <p className="text-slate-500 font-medium animate-pulse">Preparing your stay...</p>
+      <p className="text-slate-500 font-medium animate-pulse">Orchestrating your suite...</p>
     </div>
   );
 
@@ -219,79 +193,41 @@ const Booking: React.FC = () => {
       <div className="max-w-3xl mx-auto py-12 px-4 animate-in fade-in zoom-in duration-700">
         <div className="bg-slate-900 border border-slate-800 rounded-[3rem] overflow-hidden shadow-2xl relative">
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600"></div>
-          
           <div className="p-8 md:p-12 text-center">
-            <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(34,197,94,0.15)] border border-green-500/20">
-              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-              </svg>
+            <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
             </div>
-            <h1 className="text-4xl font-black mb-2 tracking-tight">Booking Confirmed!</h1>
-            <p className="text-slate-400 text-lg mb-10">Your adventure begins at <span className="text-white font-bold">{hotel.name}</span>.</p>
-
-            <div className="bg-slate-950/50 rounded-[2rem] border border-slate-800 p-8 text-left space-y-8 relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-8 opacity-[0.03] select-none pointer-events-none">
-                 <svg className="w-48 h-48" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-               </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+            <h1 className="text-4xl font-black mb-2 tracking-tight">Booking Secured</h1>
+            <p className="text-slate-400 text-lg mb-10">Your luxury stay at <span className="text-white font-bold">{hotel?.name}</span> is confirmed.</p>
+            <div className="bg-slate-950/50 rounded-[2rem] border border-slate-800 p-8 text-left space-y-8 relative">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                  <div className="space-y-6">
                    <div>
                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Reservation Reference</p>
-                     <p className="font-mono text-indigo-400 text-lg font-bold bg-indigo-400/5 px-3 py-1 rounded-lg border border-indigo-400/10 inline-block">
-                       {confirmedBooking._id}
-                     </p>
+                     <p className="font-mono text-indigo-400 text-lg font-bold bg-indigo-400/5 px-3 py-1 rounded-lg border border-indigo-400/10 inline-block">{confirmedBooking._id}</p>
                    </div>
                    <div>
                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Stay Amount</p>
                      <p className="text-4xl font-black text-white">${confirmedBooking.totalPrice}</p>
-                     <p className="text-xs text-slate-500 mt-1 font-medium italic">Confirmed & Paid in Full</p>
                    </div>
                  </div>
-
                  <div className="space-y-6">
                    <div className="grid grid-cols-2 gap-4">
                      <div>
                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Check-In</p>
-                       <p className="font-bold text-slate-200">{new Date(confirmedBooking.checkInDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                       <p className="font-bold text-slate-200">{new Date(confirmedBooking.checkInDate).toLocaleDateString()}</p>
                      </div>
                      <div>
                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Check-Out</p>
-                       <p className="font-bold text-slate-200">{new Date(confirmedBooking.checkOutDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                       <p className="font-bold text-slate-200">{new Date(confirmedBooking.checkOutDate).toLocaleDateString()}</p>
                      </div>
                    </div>
-                   <div>
-                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Accommodation Tier</p>
-                     <div className="flex items-center gap-2">
-                       <span className="w-2 h-2 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]"></span>
-                       <p className="font-bold text-white uppercase text-sm tracking-wide">{selectedRoom?.roomType || 'Standard'}</p>
-                     </div>
-                   </div>
-                 </div>
-               </div>
-
-               <div className="pt-8 border-t border-slate-800/50 flex flex-wrap items-center gap-4 text-xs font-bold text-slate-500">
-                 <div className="flex items-center gap-1.5">
-                   <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                   <span>Confirmation sent to email</span>
-                 </div>
-                 <div className="flex items-center gap-1.5">
-                   <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                   <span>Secure Transaction</span>
                  </div>
                </div>
             </div>
-
             <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/my-bookings" className="bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-5 rounded-2xl font-black transition-all shadow-xl shadow-indigo-600/20 active:scale-95 group">
-                <span className="flex items-center gap-2">
-                  View My History
-                  <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                </span>
-              </Link>
-              <Link to="/" className="bg-slate-800 hover:bg-slate-700 text-white px-10 py-5 rounded-2xl font-black transition-all active:scale-95">
-                Explore More
-              </Link>
+              <Link to="/my-bookings" className="bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-5 rounded-2xl font-black transition-all shadow-xl active:scale-95">View History</Link>
+              <Link to="/" className="bg-slate-800 hover:bg-slate-700 text-white px-10 py-5 rounded-2xl font-black transition-all">Explore More</Link>
             </div>
           </div>
         </div>
@@ -299,223 +235,62 @@ const Booking: React.FC = () => {
     );
   }
 
-  const days = calculateDays();
-  const totalPrice = selectedRoom ? days * selectedRoom.pricePerNight : 0;
+  const daysStay = calculateDays();
+  const totalPrice = selectedRoom ? daysStay * selectedRoom.pricePerNight : 0;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 relative">
-      {/* Gallery Modal */}
-      {galleryOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 transition-opacity duration-300">
-          <div className="absolute top-6 left-6 text-white z-10 animate-in fade-in slide-in-from-left-4">
-            <h4 className="text-xl font-bold">{hotel.name}</h4>
-            <p className="text-slate-400 text-sm">Image {activeImageIndex + 1} of {hotelImages.length}</p>
-          </div>
-          
-          <div className="absolute top-6 right-6 flex items-center gap-4 z-10 animate-in fade-in slide-in-from-right-4">
-            <div className="flex bg-slate-800/80 rounded-full p-1 border border-slate-700 shadow-xl">
-              <button onClick={() => handleZoom(0.5)} className="p-2 hover:bg-slate-700 rounded-full text-white transition-colors" title="Zoom In">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" /></svg>
-              </button>
-              <button onClick={() => handleZoom(-0.5)} className="p-2 hover:bg-slate-700 rounded-full text-white transition-colors" title="Zoom Out">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM7 10h6" /></svg>
-              </button>
-            </div>
-            <button onClick={closeGallery} className="bg-white/10 hover:bg-white/20 p-3 rounded-full text-white backdrop-blur-md transition-all active:scale-90 border border-white/10">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-
-          <div 
-            className="w-full h-full flex items-center justify-center relative overflow-hidden cursor-move"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-          >
-            <button onClick={prevImage} className="absolute left-4 md:left-10 z-10 bg-black/50 hover:bg-indigo-600 p-4 rounded-full text-white transition-all backdrop-blur-md border border-white/10 group active:scale-95 shadow-2xl">
-              <svg className="w-6 h-6 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" /></svg>
-            </button>
-            <button onClick={nextImage} className="absolute right-4 md:right-10 z-10 bg-black/50 hover:bg-indigo-600 p-4 rounded-full text-white transition-all backdrop-blur-md border border-white/10 group active:scale-95 shadow-2xl">
-              <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
-            </button>
-
-            <div 
-              style={{
-                transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
-                transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-              className="max-w-[90vw] max-h-[80vh] flex items-center justify-center"
-            >
-              <img 
-                key={activeImageIndex}
-                src={hotelImages[activeImageIndex]} 
-                className="max-w-full max-h-full object-contain shadow-[0_0_80px_rgba(0,0,0,0.5)] rounded-2xl select-none animate-in fade-in duration-700"
-                alt={`Gallery ${activeImageIndex}`}
-                draggable={false}
-              />
-            </div>
-          </div>
-
-          <div className="absolute bottom-10 flex gap-3 p-2 bg-slate-900/50 backdrop-blur-md rounded-2xl border border-white/10 overflow-x-auto max-w-[80vw] animate-in fade-in slide-in-from-bottom-4 shadow-2xl">
-            {hotelImages.map((img: string, i: number) => (
-              <button 
-                key={i} 
-                onClick={(e) => { e.stopPropagation(); setActiveImageIndex(i); setZoom(1); setPosition({x:0,y:0}); }}
-                className={`w-24 h-16 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all duration-300 ${activeImageIndex === i ? 'border-indigo-500 scale-105 shadow-[0_0_20px_rgba(99,102,241,0.3)]' : 'border-transparent opacity-40 hover:opacity-100 hover:scale-105'}`}
-              >
-                <img src={img} className="w-full h-full object-cover" alt={`Thumb ${i}`} />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
+    <div className="max-w-7xl mx-auto px-4">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-        {/* Left Column: Info */}
         <div className="lg:col-span-7 space-y-12">
           <section>
             <Link to="/" className="text-indigo-400 text-sm font-black flex items-center gap-2 mb-8 hover:-translate-x-1 transition-transform inline-flex bg-indigo-400/5 px-4 py-2 rounded-xl border border-indigo-400/10">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
               Back to hotels
             </Link>
-            <div className="flex flex-wrap items-center justify-between gap-6 mb-6">
-              <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-tight">{hotel?.name}</h1>
-              <div className="bg-slate-900 border border-slate-800 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-xl">
-                <span className="text-indigo-400 font-black text-xl">{hotel?.rating}</span>
-                <div className="flex text-indigo-400">
-                  {[...Array(5)].map((_, i) => (
-                    <svg key={i} className={`w-5 h-5 ${i < Math.floor(hotel?.rating || 0) ? 'fill-current' : 'opacity-20'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <p className="text-slate-400 text-xl font-medium flex items-center gap-2">
-              <svg className="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-              {hotel?.location}
-            </p>
+            <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-tight mb-4">{hotel?.name}</h1>
+            <p className="text-slate-400 text-xl font-medium flex items-center gap-2">{hotel?.location}</p>
           </section>
 
-          {/* New Interactive Carousel Layout */}
-          <div className="space-y-6">
-            <div 
-              className="relative w-full aspect-[16/9] rounded-[3rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)] border border-slate-800 group"
-              onMouseEnter={() => setIsAutoPlaying(false)}
-              onMouseLeave={() => setIsAutoPlaying(true)}
-            >
-              {/* Main Image Slides */}
-              <div className="relative w-full h-full">
-                {hotelImages.map((img, index) => (
-                  <div
-                    key={index}
-                    className={`absolute inset-0 transition-all duration-1000 ease-[cubic-bezier(0.4, 0, 0.2, 1)] transform ${
-                      index === currentSlide 
-                        ? 'opacity-100 translate-x-0 scale-100' 
-                        : index < currentSlide 
-                          ? 'opacity-0 -translate-x-full scale-110' 
-                          : 'opacity-0 translate-x-full scale-110'
-                    }`}
-                  >
-                    <img 
-                      src={img} 
-                      className="w-full h-full object-cover" 
-                      alt={`${hotel?.name} view ${index + 1}`} 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent"></div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Carousel Navigation Arrows */}
-              <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                <button 
-                  onClick={(e) => { e.stopPropagation(); prevSlide(); }}
-                  className="w-14 h-14 bg-slate-950/50 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-indigo-600 transition-all active:scale-90 pointer-events-auto shadow-2xl"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" /></svg>
-                </button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); nextSlide(); }}
-                  className="w-14 h-14 bg-slate-950/50 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-indigo-600 transition-all active:scale-90 pointer-events-auto shadow-2xl"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
-                </button>
-              </div>
-
-              {/* Carousel Action Overlay */}
-              <div className="absolute top-6 right-6 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <button 
-                  onClick={() => openGallery(currentSlide)}
-                  className="bg-white/10 hover:bg-white/20 backdrop-blur-xl px-4 py-2 rounded-xl text-white text-xs font-black uppercase tracking-widest border border-white/10 flex items-center gap-2 transition-all shadow-2xl"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-                  Full Screen
-                </button>
-              </div>
-
-              {/* Progress Indicators */}
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 px-4 py-2 bg-black/20 backdrop-blur-md rounded-full border border-white/5">
-                {hotelImages.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentSlide(index)}
-                    className={`h-1.5 transition-all duration-500 rounded-full ${
-                      index === currentSlide ? 'w-8 bg-indigo-500' : 'w-1.5 bg-white/30 hover:bg-white/50'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Thumbnail Strip Navigation */}
-            <div className="flex gap-4 overflow-x-auto pb-4 px-2 no-scrollbar scroll-smooth">
+          <div className="relative w-full aspect-[16/9] rounded-[3rem] overflow-hidden shadow-2xl border border-slate-800 group">
+            <div className="relative w-full h-full">
               {hotelImages.map((img, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`relative flex-shrink-0 w-32 aspect-video rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
-                    currentSlide === index ? 'border-indigo-500 scale-105 shadow-lg shadow-indigo-500/20' : 'border-slate-800 opacity-50 hover:opacity-100'
-                  }`}
-                >
-                  <img src={img} className="w-full h-full object-cover" alt={`Thumb ${index + 1}`} />
-                </button>
+                <img key={index} src={img} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`} />
+              ))}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent"></div>
+            </div>
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
+              {hotelImages.map((_, index) => (
+                <button key={index} onClick={() => setCurrentSlide(index)} className={`h-1 rounded-full transition-all ${index === currentSlide ? 'w-8 bg-indigo-500' : 'w-2 bg-white/30'}`} />
               ))}
             </div>
           </div>
 
           <section className="bg-slate-900/30 p-10 rounded-[3rem] border border-slate-800/50 backdrop-blur-sm">
              <h2 className="text-3xl font-black mb-6 tracking-tight">The Experience</h2>
-             <p className="text-slate-400 leading-relaxed mb-10 text-lg font-medium">{hotel?.description}</p>
+             <p className="text-slate-400 leading-relaxed mb-10 text-lg">{hotel?.description}</p>
              <div className="flex flex-wrap gap-3">
                {hotel?.amenities?.map((a: string, i: number) => (
-                 <span key={i} className="px-5 py-2.5 bg-slate-800/40 rounded-2xl text-xs font-black text-slate-300 border border-slate-700/50 uppercase tracking-wide">
-                   {a}
-                 </span>
+                 <span key={i} className="px-5 py-2.5 bg-slate-800/40 rounded-2xl text-xs font-black text-slate-300 border border-slate-700/50 uppercase tracking-wide">{a}</span>
                ))}
              </div>
           </section>
 
           <section className="space-y-8">
-            <h2 className="text-3xl font-black tracking-tight">Select Your Accommodation</h2>
+            <h2 className="text-3xl font-black tracking-tight">Select Your Suite</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {rooms.map((room: any) => (
                 <button 
                   key={room._id}
                   onClick={() => setSelectedRoom(room)}
-                  className={`p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group ${
-                    selectedRoom?._id === room._id 
-                      ? 'border-indigo-500 bg-indigo-500/5 shadow-[0_0_40px_rgba(99,102,241,0.1)]' 
-                      : 'border-slate-800 bg-slate-900/50 hover:border-slate-700 hover:bg-slate-900/80 shadow-xl'
+                  className={`p-8 rounded-[2.5rem] border-2 text-left transition-all ${
+                    selectedRoom?._id === room._id ? 'border-indigo-500 bg-indigo-500/5' : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'
                   }`}
                 >
-                  <div className={`absolute top-6 right-6 p-2 rounded-xl transition-all ${selectedRoom?._id === room._id ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-500'}`}>
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                  </div>
-                  <h4 className="font-black text-2xl mb-2 tracking-tight">{room.roomType} Suite</h4>
-                  <p className="text-slate-500 font-bold text-sm mb-8 uppercase tracking-widest">Occupancy: {room.capacity} Guests</p>
+                  <h4 className="font-black text-2xl mb-2">{room.roomType}</h4>
+                  <p className="text-slate-500 font-bold text-sm mb-8 uppercase tracking-widest">Capacity: {room.capacity} Guests</p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-black text-white">${room.pricePerNight}</span>
-                    <span className="text-slate-500 text-xs font-black uppercase tracking-[0.2em]">/ Per Night</span>
+                    <span className="text-slate-500 text-xs font-black uppercase tracking-widest">/ Night</span>
                   </div>
                 </button>
               ))}
@@ -523,145 +298,49 @@ const Booking: React.FC = () => {
           </section>
         </div>
 
-        {/* Right Column: Reservation Sidebar */}
         <div className="lg:col-span-5">
-          <div className="bg-slate-900 border border-slate-800 p-8 md:p-12 rounded-[3.5rem] sticky top-24 shadow-[0_40px_100px_rgba(0,0,0,0.4)] backdrop-blur-2xl">
-            <div className="mb-10">
-              <h3 className="text-3xl font-black mb-2 tracking-tight">Stay Orchestration</h3>
-              <p className="text-slate-500 text-sm font-medium">Define your dates and secure your escape.</p>
-            </div>
-            
-            <div className="space-y-8 mb-10">
-              {/* Custom Sophisticated Date Range Picker */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-4">
-                    <div className={`transition-all duration-300 ${checkIn ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Check-In</p>
-                      <p className="text-base font-black text-white">{checkIn ? checkIn.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'Pending'}</p>
-                    </div>
-                    <div className="h-10 w-[1px] bg-slate-800 mt-2 self-center"></div>
-                    <div className={`transition-all duration-300 ${checkOut ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Check-Out</p>
-                      <p className="text-base font-black text-white">{checkOut ? checkOut.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'Pending'}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
-                      className="p-3 bg-slate-800 hover:bg-slate-700 rounded-2xl text-slate-400 transition-all active:scale-90"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" /></svg>
-                    </button>
-                    <button 
-                      onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
-                      className="p-3 bg-slate-800 hover:bg-slate-700 rounded-2xl text-slate-400 transition-all active:scale-90"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                  </div>
+          <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3.5rem] sticky top-24 shadow-2xl backdrop-blur-2xl">
+            <h3 className="text-3xl font-black mb-8 tracking-tight">Stay Details</h3>
+            <div className="space-y-8">
+              <div className="bg-slate-950 border border-slate-800 rounded-[2.5rem] p-6">
+                <div className="text-center mb-6 font-black text-indigo-400 uppercase tracking-widest text-xs">
+                  {viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
                 </div>
-
-                <div className="bg-slate-950 border border-slate-800 rounded-[2.5rem] p-6 overflow-hidden shadow-inner">
-                  <div className="text-center mb-6">
-                    <span className="text-xs font-black text-indigo-400 uppercase tracking-[0.3em]">{monthName}</span>
-                  </div>
-                  <div className="grid grid-cols-7 gap-1 text-center mb-3">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                      <span key={i} className="text-[10px] font-black text-slate-600">{d}</span>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-7 gap-1" onMouseLeave={() => setHoverDate(null)}>
-                    {calendarDays.map((date, idx) => {
-                      if (!date) return <div key={`empty-${idx}`} className="aspect-square"></div>;
-                      
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const isPast = date < today;
-                      const active = isSelected(date);
-                      const inRange = isInRange(date);
-                      const isCheckIn = checkIn && date.getTime() === checkIn.getTime();
-                      const isCheckOut = checkOut && date.getTime() === checkOut.getTime();
-                      
-                      return (
-                        <button
-                          key={date.getTime()}
-                          disabled={isPast}
-                          onClick={() => handleDateClick(date)}
-                          onMouseEnter={() => !isPast && setHoverDate(date)}
-                          className={`
-                            aspect-square rounded-2xl text-xs font-bold transition-all relative flex items-center justify-center
-                            ${isPast ? 'text-slate-800 cursor-not-allowed' : 'hover:scale-110 active:scale-95'}
-                            ${active ? 'bg-indigo-600 text-white z-10 shadow-[0_0_20px_rgba(99,102,241,0.4)]' : 'text-slate-400'}
-                            ${inRange ? 'bg-indigo-500/10 text-indigo-300' : ''}
-                            ${!active && !inRange && !isPast ? 'hover:bg-slate-800' : ''}
-                            ${isCheckIn && !checkOut ? 'rounded-r-none' : ''}
-                            ${isCheckOut ? 'rounded-l-none' : ''}
-                          `}
-                        >
-                          <span className="relative z-10">{date.getDate()}</span>
-                          {date.getTime() === today.getTime() && !active && (
-                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-500/50 rounded-full"></div>
-                          )}
-                          {inRange && (
-                            <div className="absolute inset-0 bg-indigo-500/5 -z-0"></div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {calendarDays.map((date, idx) => {
+                    if (!date) return <div key={`empty-${idx}`} className="aspect-square"></div>;
+                    const isPast = date < new Date(new Date().setHours(0,0,0,0));
+                    return (
+                      <button
+                        key={date.getTime()}
+                        disabled={isPast}
+                        onClick={() => handleDateClick(date)}
+                        className={`aspect-square rounded-2xl text-xs font-bold transition-all flex items-center justify-center
+                          ${isPast ? 'text-slate-800' : 'hover:bg-slate-800 text-slate-400'}
+                          ${isSelected(date) ? 'bg-indigo-600 text-white' : ''}
+                          ${isInRange(date) ? 'bg-indigo-500/10 text-indigo-300' : ''}`}
+                      >
+                        {date.getDate()}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-
-              {selectedRoom && (
-                <div className="bg-slate-950 border border-slate-800 rounded-[2rem] p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Tier Selected</span>
-                    <span className="font-black text-white uppercase">{selectedRoom.roomType}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Stay Duration</span>
-                    <span className="font-black text-indigo-400">{days || 0} {days === 1 ? 'Night' : 'Nights'}</span>
-                  </div>
-                  
-                  <div className="pt-6 border-t border-slate-800">
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Estimated Total</p>
-                        <p className="text-5xl font-black text-white">${totalPrice}</p>
-                      </div>
-                    </div>
-                  </div>
+              
+              {selectedRoom && daysStay > 0 && (
+                <div className="bg-slate-950 border border-slate-800 rounded-[2rem] p-6 flex justify-between items-center">
+                  <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Grand Total</span>
+                  <span className="font-black text-white text-3xl">${totalPrice}</span>
                 </div>
               )}
-            </div>
 
-            <button 
-              onClick={handleBooking}
-              disabled={bookingLoading || !selectedRoom || days <= 0}
-              className="w-full bg-indigo-600 text-white hover:bg-indigo-500 py-6 rounded-3xl font-black transition-all shadow-[0_20px_50px_rgba(99,102,241,0.3)] disabled:opacity-20 disabled:cursor-not-allowed active:scale-95 text-lg relative overflow-hidden group"
-            >
-              <span className="relative z-10 flex items-center justify-center gap-3">
-                {bookingLoading ? (
-                  <>
-                    <svg className="animate-spin h-6 w-6 text-white" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Processing...
-                  </>
-                ) : 'Complete Reservation'}
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-            </button>
-            
-            <div className="mt-8 text-center">
-              <div className="inline-flex items-center gap-2 bg-slate-950/50 px-4 py-2 rounded-xl border border-slate-800">
-                <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Premium Encrypted Checkout</span>
-              </div>
+              <button 
+                onClick={handleBooking}
+                disabled={bookingLoading || !selectedRoom || daysStay <= 0}
+                className="w-full bg-indigo-600 text-white hover:bg-indigo-500 py-6 rounded-3xl font-black transition-all shadow-xl disabled:opacity-20 active:scale-95 text-lg"
+              >
+                {bookingLoading ? 'Processing...' : 'Secure Reservation'}
+              </button>
             </div>
           </div>
         </div>
