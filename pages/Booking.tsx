@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import API from '../api.ts';
 
@@ -17,6 +17,11 @@ const Booking: React.FC = () => {
   const [isBooked, setIsBooked] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
   
+  // Carousel State
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const autoPlayTimer = useRef<number | null>(null);
+
   // Calendar State
   const [viewDate, setViewDate] = useState(new Date());
   
@@ -42,6 +47,33 @@ const Booking: React.FC = () => {
     };
     fetchData();
   }, [hotelId]);
+
+  const hotelImages = useMemo(() => {
+    if (!hotel) return [];
+    return hotel.images?.length > 0 ? hotel.images : [
+      'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1551882547-ff43c63faf76?auto=format&fit=crop&q=80&w=1200'
+    ];
+  }, [hotel]);
+
+  // Carousel Logic
+  const nextSlide = useCallback(() => {
+    setCurrentSlide(prev => (prev + 1) % hotelImages.length);
+  }, [hotelImages.length]);
+
+  const prevSlide = useCallback(() => {
+    setCurrentSlide(prev => (prev - 1 + hotelImages.length) % hotelImages.length);
+  }, [hotelImages.length]);
+
+  useEffect(() => {
+    if (isAutoPlaying && !galleryOpen) {
+      autoPlayTimer.current = window.setInterval(nextSlide, 5000);
+    }
+    return () => {
+      if (autoPlayTimer.current) clearInterval(autoPlayTimer.current);
+    };
+  }, [isAutoPlaying, galleryOpen, nextSlide]);
 
   // Date Selection Logic
   const handleDateClick = (date: Date) => {
@@ -163,14 +195,14 @@ const Booking: React.FC = () => {
 
   const nextImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setActiveImageIndex(prev => (prev + 1) % (hotel.images?.length || 1));
+    setActiveImageIndex(prev => (prev + 1) % hotelImages.length);
     setZoom(1);
     setPosition({ x: 0, y: 0 });
   };
 
   const prevImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setActiveImageIndex(prev => (prev - 1 + (hotel.images?.length || 1)) % (hotel.images?.length || 1));
+    setActiveImageIndex(prev => (prev - 1 + hotelImages.length) % hotelImages.length);
     setZoom(1);
     setPosition({ x: 0, y: 0 });
   };
@@ -269,11 +301,6 @@ const Booking: React.FC = () => {
 
   const days = calculateDays();
   const totalPrice = selectedRoom ? days * selectedRoom.pricePerNight : 0;
-  const hotelImages = hotel.images?.length > 0 ? hotel.images : [
-    'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=1200',
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200',
-    'https://images.unsplash.com/photo-1551882547-ff43c63faf76?auto=format&fit=crop&q=80&w=1200'
-  ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 relative">
@@ -353,64 +380,114 @@ const Booking: React.FC = () => {
               Back to hotels
             </Link>
             <div className="flex flex-wrap items-center justify-between gap-6 mb-6">
-              <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-tight">{hotel.name}</h1>
+              <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-tight">{hotel?.name}</h1>
               <div className="bg-slate-900 border border-slate-800 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-xl">
-                <span className="text-indigo-400 font-black text-xl">{hotel.rating}</span>
+                <span className="text-indigo-400 font-black text-xl">{hotel?.rating}</span>
                 <div className="flex text-indigo-400">
                   {[...Array(5)].map((_, i) => (
-                    <svg key={i} className={`w-5 h-5 ${i < Math.floor(hotel.rating) ? 'fill-current' : 'opacity-20'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                    <svg key={i} className={`w-5 h-5 ${i < Math.floor(hotel?.rating || 0) ? 'fill-current' : 'opacity-20'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
                   ))}
                 </div>
               </div>
             </div>
             <p className="text-slate-400 text-xl font-medium flex items-center gap-2">
               <svg className="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-              {hotel.location}
+              {hotel?.location}
             </p>
           </section>
 
-          {/* Gallery Preview Layout */}
-          <div className="grid grid-cols-4 grid-rows-2 gap-4 h-[550px]">
+          {/* New Interactive Carousel Layout */}
+          <div className="space-y-6">
             <div 
-              onClick={() => openGallery(0)} 
-              className="col-span-4 md:col-span-3 row-span-2 rounded-[3rem] overflow-hidden shadow-2xl border border-slate-800 relative group cursor-pointer"
+              className="relative w-full aspect-[16/9] rounded-[3rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)] border border-slate-800 group"
+              onMouseEnter={() => setIsAutoPlaying(false)}
+              onMouseLeave={() => setIsAutoPlaying(true)}
             >
-              <img 
-                src={hotelImages[0]} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" 
-                alt={hotel.name}
-              />
-              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                <div className="bg-white/10 backdrop-blur-xl px-8 py-4 rounded-2xl border border-white/20 text-white font-black text-sm uppercase tracking-widest shadow-2xl scale-95 group-hover:scale-100 transition-transform">
-                  View Full Gallery
-                </div>
+              {/* Main Image Slides */}
+              <div className="relative w-full h-full">
+                {hotelImages.map((img, index) => (
+                  <div
+                    key={index}
+                    className={`absolute inset-0 transition-all duration-1000 ease-[cubic-bezier(0.4, 0, 0.2, 1)] transform ${
+                      index === currentSlide 
+                        ? 'opacity-100 translate-x-0 scale-100' 
+                        : index < currentSlide 
+                          ? 'opacity-0 -translate-x-full scale-110' 
+                          : 'opacity-0 translate-x-full scale-110'
+                    }`}
+                  >
+                    <img 
+                      src={img} 
+                      className="w-full h-full object-cover" 
+                      alt={`${hotel?.name} view ${index + 1}`} 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent"></div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Carousel Navigation Arrows */}
+              <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); prevSlide(); }}
+                  className="w-14 h-14 bg-slate-950/50 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-indigo-600 transition-all active:scale-90 pointer-events-auto shadow-2xl"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); nextSlide(); }}
+                  className="w-14 h-14 bg-slate-950/50 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-indigo-600 transition-all active:scale-90 pointer-events-auto shadow-2xl"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
+                </button>
+              </div>
+
+              {/* Carousel Action Overlay */}
+              <div className="absolute top-6 right-6 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <button 
+                  onClick={() => openGallery(currentSlide)}
+                  className="bg-white/10 hover:bg-white/20 backdrop-blur-xl px-4 py-2 rounded-xl text-white text-xs font-black uppercase tracking-widest border border-white/10 flex items-center gap-2 transition-all shadow-2xl"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                  Full Screen
+                </button>
+              </div>
+
+              {/* Progress Indicators */}
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 px-4 py-2 bg-black/20 backdrop-blur-md rounded-full border border-white/5">
+                {hotelImages.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`h-1.5 transition-all duration-500 rounded-full ${
+                      index === currentSlide ? 'w-8 bg-indigo-500' : 'w-1.5 bg-white/30 hover:bg-white/50'
+                    }`}
+                  />
+                ))}
               </div>
             </div>
-            <div 
-              onClick={() => openGallery(1)}
-              className="hidden md:block col-span-1 row-span-1 rounded-[2rem] overflow-hidden border border-slate-800 relative group cursor-pointer"
-            >
-              <img src={hotelImages[1] || hotelImages[0]} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="View 2" />
-            </div>
-            <div 
-              onClick={() => openGallery(2)}
-              className="hidden md:block col-span-1 row-span-1 rounded-[2rem] overflow-hidden border border-slate-800 relative group cursor-pointer"
-            >
-              <img src={hotelImages[2] || hotelImages[0]} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="View 3" />
-              {hotelImages.length > 3 && (
-                <div className="absolute inset-0 bg-slate-950/70 flex flex-col items-center justify-center backdrop-blur-sm">
-                  <span className="text-white font-black text-3xl">+{hotelImages.length - 3}</span>
-                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-1">Photos</span>
-                </div>
-              )}
+
+            {/* Thumbnail Strip Navigation */}
+            <div className="flex gap-4 overflow-x-auto pb-4 px-2 no-scrollbar scroll-smooth">
+              {hotelImages.map((img, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`relative flex-shrink-0 w-32 aspect-video rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
+                    currentSlide === index ? 'border-indigo-500 scale-105 shadow-lg shadow-indigo-500/20' : 'border-slate-800 opacity-50 hover:opacity-100'
+                  }`}
+                >
+                  <img src={img} className="w-full h-full object-cover" alt={`Thumb ${index + 1}`} />
+                </button>
+              ))}
             </div>
           </div>
 
           <section className="bg-slate-900/30 p-10 rounded-[3rem] border border-slate-800/50 backdrop-blur-sm">
              <h2 className="text-3xl font-black mb-6 tracking-tight">The Experience</h2>
-             <p className="text-slate-400 leading-relaxed mb-10 text-lg font-medium">{hotel.description}</p>
+             <p className="text-slate-400 leading-relaxed mb-10 text-lg font-medium">{hotel?.description}</p>
              <div className="flex flex-wrap gap-3">
-               {hotel.amenities?.map((a: string, i: number) => (
+               {hotel?.amenities?.map((a: string, i: number) => (
                  <span key={i} className="px-5 py-2.5 bg-slate-800/40 rounded-2xl text-xs font-black text-slate-300 border border-slate-700/50 uppercase tracking-wide">
                    {a}
                  </span>
